@@ -31,6 +31,12 @@
       "baseUrl": "https://your-resource.openai.azure.com/openai/deployments/your-deployment",
       "apiKey": "your-azure-key",
       "model": "gpt-4o"
+    },
+    "opencode-zen": {
+      "name": "OpenCode Zen",
+      "baseUrl": "https://opencode.ai/zen/v1",
+      "apiKey": "sk-your-opencode-zen-key",
+      "model": "deepseek-v4-flash-free"
     }
   }
 }

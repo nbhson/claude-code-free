@@ -197,6 +197,52 @@ ANTHROPIC_BASE_URL=http://localhost:4000 claude
 
 > **Tất cả tính năng của Claude Code đều hoạt động** — file editing, bash commands, MCP tools, session management, v.v.
 
+> ⚠️ Claude Code CLI phiên bản mới yêu cầu đăng nhập. Chạy `/login` lần đầu, sau đó dùng `ANTHROPIC_BASE_URL=http://localhost:4000 claude` — proxy sẽ xử lý tất cả requests, không gọi Anthropic API thật.
+
+### 5. Cấu hình cho OpenCode Zen API (free)
+
+Dùng **DeepSeek V4 Flash Free** hay các free models khác qua [OpenCode Zen](https://opencode.ai/zen):
+
+1. Tạo tài khoản tại [opencode.ai/auth](https://opencode.ai/auth)
+2. Copy API key
+3. Sửa `config.json`:
+
+```json
+{
+  "activeProvider": "opencode-zen",
+  "providers": {
+    "opencode-zen": {
+      "name": "OpenCode Zen",
+      "baseUrl": "https://opencode.ai/zen/v1",
+      "apiKey": "sk-your-key-here",
+      "model": "deepseek-v4-flash-free"
+    }
+  }
+}
+```
+
+> Model chỉ cần tên ví dụ `deepseek-v4-flash-free`, không prefix `opencode/`.
+
+Free models khả dụng:
+
+| Model ID | Ghi chú |
+|---|---|
+| `deepseek-v4-flash-free` | DeepSeek V4 Flash |
+| `mimo-v2.5-free` | MiMo V2.5 |
+| `big-pickle` | Big Pickle |
+| `laguna-s-2.1-free` | Laguna S 2.1 |
+| Các model `*-free` khác | Xem tại [Zen docs](https://opencode.ai/docs/zen/) |
+
+Hoặc dùng env override:
+
+```bash
+ACTIVE_PROVIDER=opencode-zen \
+PROVIDER_BASE_URL=https://opencode.ai/zen/v1 \
+PROVIDER_API_KEY=sk-your-key-here \
+PROVIDER_MODEL=deepseek-v4-flash-free \
+npm start
+```
+
 ## Chuyển đổi Provider
 
 ### Cách 1: Config `activeProvider`
@@ -263,6 +309,7 @@ curl http://localhost:4000/v1/messages \
 | **Together** | `https://api.together.xyz/v1` | ✅ | |
 | **Mistral** | `https://api.mistral.ai/v1` | ✅ | |
 | **Google Gemini (OpenAI proxy)** | `https://generativelanguage.googleapis.com/v1beta/openai` | ✅ | via Gemini OpenAI compatibility |
+| **OpenCode Zen** 🆕 | `https://opencode.ai/zen/v1` | ✅ | Free models available (DeepSeek, MiMo, ...) |
 
 ## API
 
