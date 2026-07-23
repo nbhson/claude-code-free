@@ -1,4 +1,4 @@
-# Claude Code Proxy ✦
+# Claude Code Free ✦
 
 Dùng **Claude Code CLI** với **bất kỳ LLM provider nào** (OpenAI, Ollama, OmniRoute, DeepSeek, Azure, ...) thay vì Anthropic API.
 
@@ -147,7 +147,7 @@ Proxy **translate** định dạng API:
 ### 1. Cài đặt
 
 ```bash
-git clone https://github.com/YOUR_USER/claude-code-proxy.git
+git clone https://github.com/nbhson/claude-code-free.git
 cd claude-code-proxy
 npm install
 ```
@@ -263,6 +263,73 @@ curl http://localhost:4000/v1/messages \
 | **Together** | `https://api.together.xyz/v1` | ✅ | |
 | **Mistral** | `https://api.mistral.ai/v1` | ✅ | |
 | **Google Gemini (OpenAI proxy)** | `https://generativelanguage.googleapis.com/v1beta/openai` | ✅ | via Gemini OpenAI compatibility |
+
+## OpenCode Integration 🆕
+
+Proxy có thể dùng **OpenCode** (desktop AI coding assistant) làm backend provider thay vì gọi API trực tiếp.
+
+### Cấu hình
+
+```json
+{
+  "activeProvider": "opencode",
+  "providers": {
+    "opencode": {
+      "type": "opencode",
+      "baseUrl": "http://127.0.0.1:4096",
+      "password": "your-password",
+      "providerID": "openai",
+      "modelID": "gpt-4o",
+      "agent": "build"
+    }
+  }
+}
+```
+
+| Field | Mô tả |
+|---|---|
+| `type` | `"opencode"` — bắt buộc để proxy biết dùng OpenCode handler |
+| `baseUrl` | OpenCode server (mặc định `http://127.0.0.1:4096`) |
+| `password` | `OPENCODE_SERVER_PASSWORD` nếu server có auth |
+| `providerID` | Provider ID bên trong OpenCode (vd: `"openai"`, `"anthropic"`, `"ollama"`) |
+| `modelID` | Model ID bên trong OpenCode (vd: `"gpt-4o"`, `"claude-sonnet-4-20250514"`) |
+| `agent` | Agent type OpenCode sẽ dùng (`"build"`, `"plan"`, ...), optional |
+
+### Luồng hoạt động
+
+```mermaid
+sequenceDiagram
+    participant CLI as Claude Code CLI
+    participant Proxy as Proxy Server
+    participant OC as OpenCode Server
+
+    CLI->>Proxy: POST /v1/messages (Anthropic format)
+    Note over Proxy: phát hiện provider type="opencode"
+
+    Proxy->>OC: POST /session (tạo session mới)
+    OC-->>Proxy: { id: "sess_xxx" }
+
+    Proxy->>OC: POST /session/sess_xxx/message
+    Note over Proxy: Translate Anthropic → OpenCode parts
+
+    OC-->>Proxy: { info, parts: [TextPart, ToolPart, ...] }
+    Note over Proxy: Translate OpenCode parts → Anthropic content blocks
+
+    Proxy-->>CLI: Anthropic response (tool_use / text)
+
+    Note over CLI,OC: Vòng lặp tool calls
+    CLI->>Proxy: tool_result
+    Proxy->>OC: POST /session/sess_xxx/message (tool result)
+    OC-->>Proxy: Next response
+    Proxy-->>CLI: Translated response
+```
+
+### Chú ý
+
+- **OpenCode phải đang chạy** — `opencode serve`
+- **Non-streaming**: v1 chỉ hỗ trợ non-streaming (sẽ bổ sung sau)
+- **Session**: proxy auto-tạo và quản lý session, tự động xoá khi shutdown
+- **Tool calls**: tool_use/tool_result được translate và cache ID mapping
 
 ## API
 

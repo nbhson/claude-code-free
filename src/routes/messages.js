@@ -5,6 +5,7 @@ const { getActiveProvider } = require('../config');
 const { translateRequest } = require('../translators/request');
 const { translateResponse, translateError } = require('../translators/response');
 const { AnthropicStreamTranslator } = require('../translators/stream');
+const opencode = require('../translators/opencode');
 
 const router = express.Router();
 
@@ -40,7 +41,37 @@ router.post('/v1/messages', async (req, res) => {
 
     const anthropicReq = req.body;
 
-    // ── 2. Stream vs non-stream ──────────────────────────────────
+    // ── 2a. OpenCode provider ────────────────────────────────────
+    if ((provider.type || 'openai') === 'opencode') {
+      const result = await opencode.handleRequest(anthropicReq, provider);
+      if (result.statusCode) {
+        return res.status(result.statusCode).json(result.body);
+      }
+
+      if (anthropicReq.stream === true) {
+        // Simulate SSE events from non-streaming OpenCode response
+        res.writeHead(200, {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+          'X-Accel-Buffering': 'no',
+        });
+        const events = opencode.buildStreamingEvents(result.body);
+        for (const evt of events) {
+          try {
+            res.write(`event: ${evt.event}\ndata: ${JSON.stringify(evt.data)}\n\n`);
+          } catch { break; }
+        }
+        try { res.end(); } catch { /* ignore */ }
+        logRequest(anthropicReq, provider, true, startTime);
+      } else {
+        logRequest(anthropicReq, provider, false, startTime);
+        res.json(result.body);
+      }
+      return;
+    }
+
+    // ── 2b. Stream vs non-stream ─────────────────────────────────
     const isStreaming = anthropicReq.stream === true;
 
     // ── 3. Translate request to OpenAI format ────────────────────
