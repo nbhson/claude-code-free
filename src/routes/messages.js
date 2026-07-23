@@ -52,13 +52,6 @@ router.post('/v1/messages', async (req, res) => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), PROXY_TIMEOUT_MS);
 
-    // For streaming: detect client disconnect mid-stream
-    if (isStreaming) {
-      req.on('close', () => {
-        if (!res.writableEnded) controller.abort();
-      });
-    }
-
     /** @type {Response} */
     let upstreamResponse;
     try {
