@@ -5,7 +5,6 @@ const express = require('express');
 const cors = require('cors');
 const { loadConfig } = require('./config');
 const messagesRouter = require('./routes/messages');
-const opencode = require('./translators/opencode');
 
 // ── Bootstrap ──────────────────────────────────────────────────────────
 
@@ -21,21 +20,13 @@ app.use(express.json({ limit: '10mb' }));
 // ── Routes ─────────────────────────────────────────────────────────────
 
 // Health / info
-app.get('/health', async (_req, res) => {
-  const body = {
+app.get('/health', (_req, res) => {
+  res.json({
     status: 'ok',
     activeProvider: config.activeProvider,
     providers: Object.keys(config.providers),
     serverTime: new Date().toISOString(),
-  };
-
-  // Include OpenCode server status if the active provider is OpenCode
-  const provider = config.providers[config.activeProvider];
-  if (provider && (provider.type || 'openai') === 'opencode') {
-    body.opencode = await opencode.getHealth(provider);
-  }
-
-  res.json(body);
+  });
 });
 
 // List configured providers
@@ -108,13 +99,6 @@ const server = app.listen(PORT, () => {
 
 function shutdown(signal) {
   console.log(`\n${signal} received — shutting down...`);
-
-  // Clean up OpenCode session if active
-  const provider = config.providers[config.activeProvider];
-  if (provider && (provider.type || 'openai') === 'opencode') {
-    opencode.destroySession(provider).catch(() => {});
-  }
-
   server.close(() => {
     console.log('Server closed.');
     process.exit(0);

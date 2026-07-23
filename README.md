@@ -141,7 +141,6 @@ Proxy **translate** định dạng API:
 - **Anthropic Messages API** → **OpenAI Chat Completions API**
 - Xử lý: system prompts, tool calls, streaming SSE, images, tool results
 - **Tool calls** được buffer và translate chính xác giữa 2 format
-- 🆕 **OpenCode** — hoặc dùng OpenCode server làm backend (xem [OpenCode Integration](#opencode-integration-))
 
 ## Quick Start
 
@@ -198,8 +197,6 @@ ANTHROPIC_BASE_URL=http://localhost:4000 claude
 
 > **Tất cả tính năng của Claude Code đều hoạt động** — file editing, bash commands, MCP tools, session management, v.v.
 
-> 💡 **Mẹo:** Bạn chỉ cần `npm start` là đủ. **OpenCode** là tính năng phụ trợ, không bắt buộc.
-
 ## Chuyển đổi Provider
 
 ### Cách 1: Config `activeProvider`
@@ -235,27 +232,6 @@ curl http://localhost:4000/v1/messages \
   -d '{"model":"deepseek-chat","messages":[{"role":"user","content":"Hello"}],"stream":false}'
 ```
 
-### Cách 5: Env override cho OpenCode
-
-Dùng biến môi trường thay vì config (không cần sửa file):
-
-```bash
-ACTIVE_PROVIDER=opencode \
-PROVIDER_BASE_URL=http://127.0.0.1:4096 \
-OPENCODE_PASSWORD=your-password \
-npm start
-```
-
-OpenCode-specific env vars:
-
-| Biến | Mô tả | Mặc định |
-|---|---|---|
-| `ACTIVE_PROVIDER=opencode` | Bật OpenCode mode | — |
-| `PROVIDER_BASE_URL` | OpenCode server URL | `http://127.0.0.1:4096` |
-| `OPENCODE_PASSWORD` | Server password (nếu có) | `""` |
-| `PROVIDER_MODEL` | Model ID (alias cho modelID) | — |
-| `PROVIDER_API_KEY` | Không dùng cho OpenCode | — |
-
 ## Cấu hình chi tiết
 
 ```jsonc
@@ -287,90 +263,6 @@ OpenCode-specific env vars:
 | **Together** | `https://api.together.xyz/v1` | ✅ | |
 | **Mistral** | `https://api.mistral.ai/v1` | ✅ | |
 | **Google Gemini (OpenAI proxy)** | `https://generativelanguage.googleapis.com/v1beta/openai` | ✅ | via Gemini OpenAI compatibility |
-| **OpenCode** 🆕 | `http://127.0.0.1:4096` | ✅ | Dùng OpenCode server làm backend |
-
-## OpenCode Integration 🆕
-
-Proxy có thể dùng **OpenCode** (desktop AI coding assistant) làm backend provider thay vì gọi API trực tiếp.
-
-> ⚠️ **Quan trọng:** OpenCode là **1 server riêng** (chạy `opencode serve`), proxy là **1 server khác** (chạy `npm start`). Cả 2 phải chạy cùng lúc.
-
-### Quick Start
-
-```bash
-# Terminal 1 — Start OpenCode server (AI backend)
-opencode serve
-
-# Terminal 2 — Start proxy (bridge giữa Claude Code và OpenCode)
-npm start
-
-# Terminal 3 — Dùng Claude Code CLI
-ANTHROPIC_BASE_URL=http://localhost:4000 claude
-```
-
-### Cấu hình
-
-```json
-{
-  "activeProvider": "opencode",
-  "providers": {
-    "opencode": {
-      "type": "opencode",
-      "baseUrl": "http://127.0.0.1:4096",
-      "password": "your-password",
-      "providerID": "openai",
-      "modelID": "gpt-4o",
-      "agent": "build"
-    }
-  }
-}
-```
-
-| Field | Mô tả |
-|---|---|
-| `type` | `"opencode"` — bắt buộc để proxy biết dùng OpenCode handler |
-| `baseUrl` | OpenCode server (mặc định `http://127.0.0.1:4096`) |
-| `password` | `OPENCODE_SERVER_PASSWORD` nếu server có auth |
-| `providerID` | Provider ID bên trong OpenCode (vd: `"openai"`, `"anthropic"`, `"ollama"`) |
-| `modelID` | Model ID bên trong OpenCode (vd: `"gpt-4o"`, `"claude-sonnet-4-20250514"`) |
-| `agent` | Agent type OpenCode sẽ dùng (`"build"`, `"plan"`, ...), optional |
-
-### Luồng hoạt động
-
-```mermaid
-sequenceDiagram
-    participant CLI as Claude Code CLI
-    participant Proxy as Proxy Server
-    participant OC as OpenCode Server
-
-    CLI->>Proxy: POST /v1/messages (Anthropic format)
-    Note over Proxy: phát hiện provider type="opencode"
-
-    Proxy->>OC: POST /session (tạo session mới)
-    OC-->>Proxy: { id: "sess_xxx" }
-
-    Proxy->>OC: POST /session/sess_xxx/message
-    Note over Proxy: Translate Anthropic → OpenCode parts
-
-    OC-->>Proxy: { info, parts: [TextPart, ToolPart, ...] }
-    Note over Proxy: Translate OpenCode parts → Anthropic content blocks
-
-    Proxy-->>CLI: Anthropic response (tool_use / text)
-
-    Note over CLI,OC: Vòng lặp tool calls
-    CLI->>Proxy: tool_result
-    Proxy->>OC: POST /session/sess_xxx/message (tool result)
-    OC-->>Proxy: Next response
-    Proxy-->>CLI: Translated response
-```
-
-### Chú ý
-
-- **OpenCode phải đang chạy** — `opencode serve`
-- **SSE simulation**: Proxy nhận response từ OpenCode API (blocking), sau đó simulate SSE events — Claude Code nhận stream như bình thường
-- **Session**: proxy auto-tạo và quản lý session, tự động xoá khi shutdown
-- **Tool calls**: tool_use/tool_result được translate và cache ID mapping
-- **Auth**: Nếu OpenCode server có password, set `OPENCODE_SERVER_PASSWORD` trong env
 
 ## API
 

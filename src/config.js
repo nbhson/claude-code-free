@@ -63,12 +63,6 @@ function getActiveProvider(overrideName) {
     baseUrl: process.env.PROVIDER_BASE_URL || provider.baseUrl,
     apiKey: process.env.PROVIDER_API_KEY || provider.apiKey || '',
     model: process.env.PROVIDER_MODEL || provider.model,
-    // Pass through OpenCode-specific fields (undefined for regular providers)
-    type: provider.type,
-    password: process.env.OPENCODE_PASSWORD || provider.password,
-    providerID: provider.providerID,
-    modelID: provider.modelID,
-    agent: provider.agent,
   };
 }
 
