@@ -200,11 +200,9 @@ function translateRequest(anthropicReq, provider) {
   };
 
   // Model config (providerID + modelID from OpenCode's config)
-  if (provider.providerID || provider.modelID) {
-    opencodeBody.model = {};
-    if (provider.providerID) opencodeBody.model.providerID = provider.providerID;
-    if (provider.modelID) opencodeBody.model.modelID = provider.modelID;
-  }
+  opencodeBody.model = {};
+  opencodeBody.model.providerID = provider.providerID || provider.name || 'openai';
+  opencodeBody.model.modelID = provider.modelID || provider.model || 'gpt-4o';
 
   if (system) opencodeBody.system = system;
   if (provider.agent) opencodeBody.agent = provider.agent;

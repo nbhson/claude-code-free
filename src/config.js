@@ -65,7 +65,7 @@ function getActiveProvider(overrideName) {
     model: process.env.PROVIDER_MODEL || provider.model,
     // Pass through OpenCode-specific fields (undefined for regular providers)
     type: provider.type,
-    password: provider.password,
+    password: process.env.OPENCODE_PASSWORD || provider.password,
     providerID: provider.providerID,
     modelID: provider.modelID,
     agent: provider.agent,
