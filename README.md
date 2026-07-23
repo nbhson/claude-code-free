@@ -137,47 +137,6 @@ sequenceDiagram
     Proxy-->>CLI: Anthropic Messages API Response
 ```
 
-```mermaid
----
-title: Data Translation Map
----
-block-beta
-    columns 2
-        block:Anthro["Anthropic Format\n(Messages API)"]:1
-            columns 1
-                A1["system: string | array"]
-                A2["messages: [{role, content}]"]
-                A3["  text | image | tool_use | tool_result"]
-                A4["tools: [{name, input_schema}]"]
-                A5["tool_choice: {type, name}"]
-                A6["model, max_tokens, temperature,\nstop_sequences, top_p, stream"]
-        end
-        block:OpenAI["OpenAI Format\n(Chat Completions API)"]:1
-            columns 1
-                B1["messages: [{role:'system', content}]"]
-                B2["messages: [{role, content}]"]
-                B3["  text → text | image → image_url |\n  tool_use → tool_calls | tool_result → role:'tool'"]
-                B4["tools: [{type:'function', function}]"]
-                B5["tool_choice: 'auto'|'none'|'required'|{type:'function'}"]
-                B6["model, messages, max_tokens,\ntemperature, stop, top_p, stream"]
-        end
-    Anthro -->|"Request"| OpenAI
-    OpenAI -->|"Response ↓"| Anthro
-    block:RespOAI["OpenAI Response"]:1
-        C1["choices[0].message.content"]
-        C2["choices[0].message.tool_calls"]
-        C3["choices[0].finish_reason"]
-        C4["usage: prompt_tokens,\ncompletion_tokens"]
-    end
-    block:RespAnth["Anthropic Response"]:1
-        D1["content: [{type:'text', text}]"]
-        D2["content: [{type:'tool_use', id, name, input}]"]
-        D3["stop_reason:\n'end_turn'|'tool_use'|'max_tokens'"]
-        D4["usage: input_tokens,\noutput_tokens"]
-    end
-    RespOAI -->|"← Translate"| RespAnth
-```
-
 Proxy **translate** định dạng API:
 - **Anthropic Messages API** → **OpenAI Chat Completions API**
 - Xử lý: system prompts, tool calls, streaming SSE, images, tool results
