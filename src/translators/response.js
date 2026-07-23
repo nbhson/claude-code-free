@@ -30,7 +30,7 @@ function translateResponse(openaiResp, anthropicReq) {
       const input = parseJsonSafe(tc.function?.arguments);
       content.push({
         type: 'tool_use',
-        id: generateId('toolu_'),
+        id: tc.id || generateId('toolu_'),
         name: tc.function?.name || 'unknown',
         input,
       });

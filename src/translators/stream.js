@@ -147,7 +147,7 @@ class AnthropicStreamTranslator {
 
       for (const idx of indices) {
         const tc = this.toolCallBuffer[idx];
-        const toolUseId = generateId('toolu_');
+        const toolUseId = tc.id || generateId('toolu_');
         const input = this._parseToolArgs(tc.args);
 
         // If we have any tool call that hasn't started streaming yet,
