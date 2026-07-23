@@ -1,18 +1,18 @@
-# Claude Code Free ✦
+# Claude Code Proxy ✦
 
-Dùng **Claude Code CLI** với **bất kỳ LLM provider nào** (OpenAI, Ollama, OmniRoute, DeepSeek, Azure, ...) thay vì Anthropic API.
+Use **Claude Code CLI** with **any LLM provider** (OpenAI, Ollama, OmniRoute, DeepSeek, Azure, ...) instead of the Anthropic API.
 
-## Cách hoạt động
+## How it works
 
 ```mermaid
 ---
-title: Kiến trúc tổng thể
+title: Architecture Overview
 ---
 flowchart LR
     subgraph CLI["🧑‍💻 Claude Code CLI"]
         direction LR
-        A1[Gửi request\nAnthropic format]
-        A2[Nhận response\nAnthropic format]
+        A1[Send request\nAnthropic format]
+        A2[Receive response\nAnthropic format]
     end
 
     subgraph Proxy["⚡ Proxy Server (localhost:4000)"]
@@ -42,14 +42,14 @@ flowchart LR
 
 ```mermaid
 ---
-title: Luồng Streaming (chi tiết)
+title: Streaming Flow (detailed)
 ---
 sequenceDiagram
     participant CLI as Claude Code CLI
     participant Proxy as Proxy Server
     participant Provider as Provider API
 
-    Note over CLI,Provider: 1. Claude Code gửi request dạng Anthropic Messages API
+    Note over CLI,Provider: 1. Claude Code sends Anthropic Messages API request
 
     CLI->>Proxy: POST /v1/messages (stream: true)
     Note right of CLI: { model, system, messages, tools, tool_choice, max_tokens }
@@ -67,26 +67,26 @@ sequenceDiagram
     Note right of Proxy: { model: "gpt-4o", messages: [...], tools: [...], stream: true }
 
     rect rgb(200, 240, 200)
-        Note over Provider: Provider xử lý
+        Note over Provider: Provider processes
         Provider-->>Proxy: SSE: data: {"choices":[{"delta":{"role":"assistant"}}]}
     end
 
     rect rgb(240, 220, 200)
         Note over Proxy: Stream Translator
-        Note over Proxy: message_start<br/>Emit sự kiện khởi tạo message
+        Note over Proxy: message_start<br/>Emit message initialization event
 
         Provider-->>Proxy: SSE: data: {"choices":[{"delta":{"content":"Hello"}}]}
         Proxy-->>CLI: event: content_block_start<br/>data: { type:"text", text:"" }
         Proxy-->>CLI: event: content_block_delta<br/>data: { type:"text_delta", text:"Hello" }
 
         Provider-->>Proxy: SSE: data: {"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"file\":"}}]}}]}
-        Note over Proxy: Tool call arguments được buffer<br/>theo index, không emit ngay
+        Note over Proxy: Tool call arguments are buffered<br/>by index, not emitted immediately
 
         Provider-->>Proxy: SSE: data: {"choices":[{"delta":{"tool_calls":[{"index":1,"function":{"arguments":"{\"cmd\":\"ls"}}]}}]}
-        Note over Proxy: Multiple tool calls có thể<br/>interleave giữa các index
+        Note over Proxy: Multiple tool calls can<br/>interleave across indices
 
         Provider-->>Proxy: SSE: data: {"choices":[{"delta":{}},"finish_reason":"tool_calls"}]}
-        Note over Proxy: Khi finish_reason đến:
+        Note over Proxy: When finish_reason arrives:
         Note over Proxy: 1. content_block_stop (text)<br/>2. content_block_start (tool_use)<br/>3. content_block_stop (tool_use)<br/>4. message_delta<br/>5. message_stop
 
         Proxy-->>CLI: event: content_block_stop data: { index:0 }
@@ -96,7 +96,7 @@ sequenceDiagram
         Proxy-->>CLI: event: message_stop data: {}
     end
 
-    Note over CLI,Provider: 2. Claude Code gửi kết quả tool
+    Note over CLI,Provider: 2. Claude Code sends tool results
 
     CLI->>Proxy: POST /v1/messages (stream: true)
     Note right of CLI: { messages: [..., {role:"assistant",content:[tool_use]},<br/>{role:"user",content:[tool_result]}] }
@@ -108,12 +108,12 @@ sequenceDiagram
 
     Proxy->>Provider: POST /v1/chat/completions
     Note right of Proxy: { messages: [..., {role:"tool",content:"..."}] }
-    Provider-->>Proxy: SSE stream response (tiếp tục vòng lặp)
+    Provider-->>Proxy: SSE stream response (continues the loop)
 ```
 
 ```mermaid
 ---
-title: Luồng Non-Streaming
+title: Non-Streaming Flow
 ---
 sequenceDiagram
     participant CLI as Claude Code CLI
@@ -125,7 +125,7 @@ sequenceDiagram
         Note over Proxy: Translate request
     end
     Proxy->>Provider: POST /v1/chat/completions (stream: false)
-    Note over Provider: Xử lý & response
+    Note over Provider: Process & respond
     Provider-->>Proxy: { choices: [{ message: { content, tool_calls } }] }
     rect rgb(240, 220, 200)
         Note over Proxy: Translate response
@@ -137,14 +137,14 @@ sequenceDiagram
     Proxy-->>CLI: Anthropic Messages API Response
 ```
 
-Proxy **translate** định dạng API:
+The proxy **translates** between API formats:
 - **Anthropic Messages API** → **OpenAI Chat Completions API**
-- Xử lý: system prompts, tool calls, streaming SSE, images, tool results
-- **Tool calls** được buffer và translate chính xác giữa 2 format
+- Handles: system prompts, tool calls, streaming SSE, images, tool results
+- **Tool calls** are buffered and accurately translated between the two formats
 
 ## Quick Start
 
-### 1. Cài đặt
+### 1. Install
 
 ```bash
 git clone https://github.com/nbhson/claude-code-free.git
@@ -152,15 +152,15 @@ cd claude-code-proxy
 npm install
 ```
 
-### 2. Cấu hình
+### 2. Configure
 
-Copy và edit `config.json`:
+Copy and edit `config.json`:
 
 ```bash
 cp config.json.example config.json
 ```
 
-Nội dung cấu hình mẫu:
+Example configuration:
 
 ```json
 {
@@ -181,31 +181,31 @@ Nội dung cấu hình mẫu:
 }
 ```
 
-### 3. Chạy proxy
+### 3. Start the proxy
 
 ```bash
 npm start
-# hoặc
-npm run dev  # auto-restart khi code thay đổi
+# or
+npm run dev  # auto-restart on code changes
 ```
 
-### 4. Dùng với Claude Code CLI
+### 4. Use with Claude Code CLI
 
 ```bash
 ANTHROPIC_BASE_URL=http://localhost:4000 claude
 ```
 
-> **Tất cả tính năng của Claude Code đều hoạt động** — file editing, bash commands, MCP tools, session management, v.v.
+> **All Claude Code features work** — file editing, bash commands, MCP tools, session management, etc.
 
-> ⚠️ Claude Code CLI phiên bản mới yêu cầu đăng nhập. Chạy `/login` lần đầu, sau đó dùng `ANTHROPIC_BASE_URL=http://localhost:4000 claude` — proxy sẽ xử lý tất cả requests, không gọi Anthropic API thật.
+> ⚠️ Newer Claude Code CLI versions require login. Run `/login` once, then use `ANTHROPIC_BASE_URL=http://localhost:4000 claude` — the proxy handles all requests without hitting the real Anthropic API.
 
-### 5. Cấu hình cho OpenCode Zen API (free)
+### 5. Set up OpenCode Zen API (free)
 
-Dùng **DeepSeek V4 Flash Free** hay các free models khác qua [OpenCode Zen](https://opencode.ai/zen):
+Use **DeepSeek V4 Flash Free** or other free models via [OpenCode Zen](https://opencode.ai/zen):
 
-1. Tạo tài khoản tại [opencode.ai/auth](https://opencode.ai/auth)
-2. Copy API key
-3. Sửa `config.json`:
+1. Create an account at [opencode.ai/auth](https://opencode.ai/auth)
+2. Copy your API key
+3. Edit `config.json`:
 
 ```json
 {
@@ -221,19 +221,19 @@ Dùng **DeepSeek V4 Flash Free** hay các free models khác qua [OpenCode Zen](h
 }
 ```
 
-> Model chỉ cần tên ví dụ `deepseek-v4-flash-free`, không prefix `opencode/`.
+> Model IDs are just the name e.g. `deepseek-v4-flash-free`, no `opencode/` prefix.
 
-Free models khả dụng:
+Available free models:
 
-| Model ID | Ghi chú |
+| Model ID | Notes |
 |---|---|
 | `deepseek-v4-flash-free` | DeepSeek V4 Flash |
 | `mimo-v2.5-free` | MiMo V2.5 |
 | `big-pickle` | Big Pickle |
 | `laguna-s-2.1-free` | Laguna S 2.1 |
-| Các model `*-free` khác | Xem tại [Zen docs](https://opencode.ai/docs/zen/) |
+| Other `*-free` models | See [Zen docs](https://opencode.ai/docs/zen/) |
 
-Hoặc dùng env override:
+Or use env overrides:
 
 ```bash
 ACTIVE_PROVIDER=opencode-zen \
@@ -243,23 +243,23 @@ PROVIDER_MODEL=deepseek-v4-flash-free \
 npm start
 ```
 
-## Chuyển đổi Provider
+## Switching Providers
 
-### Cách 1: Config `activeProvider`
+### Method 1: Config `activeProvider`
 
-Sửa `activeProvider` trong `config.json`:
+Edit `activeProvider` in `config.json`:
 
 ```json
 { "activeProvider": "ollama" }
 ```
 
-### Cách 2: Biến môi trường
+### Method 2: Environment variable
 
 ```bash
 ACTIVE_PROVIDER=ollama npm start
 ```
 
-### Cách 3: Env override (không cần sửa config)
+### Method 3: Env override (no config edit)
 
 ```bash
 PROVIDER_BASE_URL=http://localhost:11434/v1 \
@@ -269,7 +269,7 @@ ACTIVE_PROVIDER=ollama \
 ANTHROPIC_BASE_URL=http://localhost:4000 claude
 ```
 
-### Cách 4: Header `X-Provider` (cho HTTP client)
+### Method 4: `X-Provider` header (for HTTP clients)
 
 ```bash
 curl http://localhost:4000/v1/messages \
@@ -278,31 +278,31 @@ curl http://localhost:4000/v1/messages \
   -d '{"model":"deepseek-chat","messages":[{"role":"user","content":"Hello"}],"stream":false}'
 ```
 
-## Cấu hình chi tiết
+## Configuration details
 
 ```jsonc
 {
-  "port": 4000,                   // Cổng proxy
-  "activeProvider": "openai",     // Provider mặc định
+  "port": 4000,                   // Proxy port
+  "activeProvider": "openai",     // Default provider
   "providers": {
-    "ten-provider": {
-      "name": "Tên hiển thị",      // (tùy chọn)
+    "provider-name": {
+      "name": "Display name",      // (optional)
       "baseUrl": "https://...",    // Base URL (OpenAI-compatible)
-      "apiKey": "sk-...",          // API key (để trống nếu không cần)
+      "apiKey": "sk-...",          // API key (leave empty if not needed)
       "model": "gpt-4o"           // Model name
     }
   }
 }
 ```
 
-## Providers tương thích
+## Compatible Providers
 
-| Provider | Base URL | Tool Calling | Ghi chú |
+| Provider | Base URL | Tool Calling | Notes |
 |---|---|---|---|
-| **OpenAI** | `https://api.openai.com/v1` | ✅ | Cần API key |
-| **Ollama** | `http://localhost:11434/v1` | ⚠️ Model-dependent | Chạy local, free |
+| **OpenAI** | `https://api.openai.com/v1` | ✅ | API key required |
+| **Ollama** | `http://localhost:11434/v1` | ⚠️ Model-dependent | Local, free |
 | **OmniRoute** | `http://localhost:8080/v1` | ✅ | Local AI Gateway |
-| **DeepSeek** | `https://api.deepseek.com/v1` | ✅ | Rẻ |
+| **DeepSeek** | `https://api.deepseek.com/v1` | ✅ | Cheap |
 | **Azure OpenAI** | `https://{res}.openai.azure.com/openai/deployments/{dep}` | ✅ | |
 | **vLLM** | `http://localhost:8000/v1` | ✅ | Self-hosted |
 | **Anyscale** | `https://api.endpoints.anyscale.com/v1` | ✅ | |
@@ -315,7 +315,7 @@ curl http://localhost:4000/v1/messages \
 
 ### `POST /v1/messages`
 
-Anthropic Messages API → forward đến provider.
+Anthropic Messages API → forward to provider.
 
 **Request** (Anthropic format):
 ```json
@@ -330,7 +330,7 @@ Anthropic Messages API → forward đến provider.
 ```
 
 **Headers:**
-- `X-Provider` — (optional) chọn provider (override `activeProvider`)
+- `X-Provider` — (optional) select provider (overrides `activeProvider`)
 - `Content-Type: application/json`
 
 ### `GET /health`
@@ -339,14 +339,14 @@ Health check + provider info.
 
 ### `GET /providers`
 
-Danh sách providers đã cấu hình.
+List configured providers.
 
-## Hạn chế
+## Limitations
 
-1. **Extended Thinking**: Không hỗ trợ — Claude Code sẽ không dùng thinking với non-Claude models.
-2. **Prompt Caching**: Không hỗ trợ — provider khác không có cache_control.
-3. **Token counting**: Các provider báo số token khác nhau, số liệu có thể không chính xác tuyệt đối.
-4. **Tool quality**: Tool calling phụ thuộc vào model đích. Model mạnh (GPT-4o, DeepSeek) hoạt động tốt; model nhỏ có thể gọi tool sai format.
+1. **Extended Thinking**: Not supported — Claude Code won't use thinking with non-Claude models.
+2. **Prompt Caching**: Not supported — other providers don't have cache_control.
+3. **Token counting**: Different providers report different token counts, numbers may not be accurate.
+4. **Tool quality**: Tool calling depends on the target model. Strong models (GPT-4o, DeepSeek) work well; smaller models may produce incorrect tool call formats.
 
 ## License
 
