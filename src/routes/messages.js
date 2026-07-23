@@ -19,7 +19,10 @@ const LOG_PREFIX = '✦';
  *
  * Headers accepted:
  *   X-Provider   - Select a specific provider from config (optional)
- *   X-Api-Key    - Override API key for this request (optional)
+ *
+ * NOTE: X-Api-Key from the incoming request is NOT forwarded to the upstream
+ * provider, because Claude Code CLI sends its own API key via this header
+ * after login, which would override the configured provider API key.
  */
 router.post('/v1/messages', async (req, res) => {
   const startTime = Date.now();
@@ -60,7 +63,6 @@ router.post('/v1/messages', async (req, res) => {
         headers: {
           'Content-Type': 'application/json',
           ...(provider.apiKey ? { Authorization: `Bearer ${provider.apiKey}` } : {}),
-          ...(req.headers['x-api-key'] ? { Authorization: `Bearer ${req.headers['x-api-key']}` } : {}),
         },
         body: JSON.stringify(openaiReq),
         signal: controller.signal,
