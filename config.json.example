@@ -1,0 +1,36 @@
+{
+  "port": 4000,
+  "activeProvider": "openai",
+  "providers": {
+    "openai": {
+      "name": "OpenAI",
+      "baseUrl": "https://api.openai.com/v1",
+      "apiKey": "sk-your-key-here",
+      "model": "gpt-4o"
+    },
+    "ollama": {
+      "name": "Ollama Local",
+      "baseUrl": "http://localhost:11434/v1",
+      "apiKey": "",
+      "model": "llama3.1:8b"
+    },
+    "omniroute": {
+      "name": "OmniRoute Local",
+      "baseUrl": "http://localhost:8080/v1",
+      "apiKey": "",
+      "model": "qwen2.5-coder:7b"
+    },
+    "deepseek": {
+      "name": "DeepSeek",
+      "baseUrl": "https://api.deepseek.com/v1",
+      "apiKey": "sk-your-deepseek-key",
+      "model": "deepseek-chat"
+    },
+    "azure": {
+      "name": "Azure OpenAI",
+      "baseUrl": "https://your-resource.openai.azure.com/openai/deployments/your-deployment",
+      "apiKey": "your-azure-key",
+      "model": "gpt-4o"
+    }
+  }
+}
